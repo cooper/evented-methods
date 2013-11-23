@@ -17,7 +17,7 @@ use 5.010;
 use Carp;
 use Scalar::Util 'blessed';
 
-our $VERSION = 0.2;
+our $VERSION = 0.3;
 
 # Evented::Methods import subroutine.
 sub import {
@@ -48,18 +48,22 @@ sub add_method {
 
     # TODO: make sure $package is subclass of E::O.
 
-    # determine the main callback code.
-    $opts{code} ||= $package->can($method);
-    if (!$code || !ref $code || ref $code ne 'CODE') {
-        carp "Evented method '$method' has no code.";
-        return;
-    }
-
     # argument checking (priority 1000).
     
     # add the main callback (priority 500).
     $package->register_callback(
-        $method  => $opts{code},
+        $method  => sub {
+        
+            # determine the main callback code.
+            my $code = $opts{code} ||= $package->can("e_$method");
+            if (!$code || !ref $code || ref $code ne 'CODE') {
+                carp "Evented method '$method' has no code.";
+                return;
+            }
+        
+            $_[0]->{return} = $code->(@_);
+            
+        },
         name     => 'method',
         priority => 500
     );
@@ -67,7 +71,8 @@ sub add_method {
     # export method caller.
     # this overwrites the method code if necessary.
     Evented::Object::export_code($package, $method, sub {
-        shift->fire_event($method => @_);
+        my $fire = shift->fire_event($method => @_);
+        return $fire->{return};
     });
     
     # store method info.
