@@ -17,16 +17,16 @@ use 5.010;
 use Carp;
 use Scalar::Util 'blessed';
 
-our $VERSION = 0.1;
-our %p;       # %p = package options
+our $VERSION = 0.2;
 
 # Evented::Methods import subroutine.
 sub import {
     my ($class, @opts) = @_;
     my $package = caller;
     
-    # store Evented::Methods options.
-    $p{$package}{desired} = \@opts;
+    # store Evented::Properties options.
+    my $store = Evented::Object::_package_store($package)->{EventedMethods} ||= {};
+    $store->{desired} = \@opts;
     
     # determine methods.
     my (%methods, $last_thing);
@@ -71,7 +71,8 @@ sub add_method {
     });
     
     # store method info.
-    $p{$package}{methods}{$method} = \%opts;
+    my $store = Evented::Object::_package_store($package)->{EventedMethods} ||= {};
+    $store->{methods}{$method} = \%opts;
     
     return 1;
 }
